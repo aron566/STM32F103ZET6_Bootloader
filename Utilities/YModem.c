@@ -27,6 +27,7 @@ typedef enum
     YMODEM_STX = 0x02,
     YMODEM_ACK = 0x06,
     YMODEM_NAK = 0x15,
+    YMODEM_CAN = 0x18,/**< 传输中止*/
     YMODEM_EOT = 0x04,
     YMODEM_C   = 0x43,
 }YMODEM_CHAR_FLAG_Typedef_t;                                              
@@ -34,6 +35,7 @@ typedef enum
 #define YMODEM_DATA_FRAME_SIZE_MIN      128U
 #define YMODEM_DATA_FRAME_SIZE_MAX      1024U
 #define YMODEM_RECEIVER_FRAME_SIZE_MIN  1U
+#define YMODEM_CAN_NUMBER               5U
 #define YMODEM_DATA_PACKAGE_SIZE_MIN    (YMODEM_DATA_FRAME_SIZE_MIN+5)
 #define YMODEM_DATA_PACKAGE_SIZE_MAX    (YMODEM_DATA_FRAME_SIZE_MAX+5)
 #define YMODEM_RECEIVER_MIN_DATA_SIZE_CHECK(size)   ((size >= YMODEM_DATA_PACKAGE_SIZE_MIN)?1:0)
@@ -221,13 +223,13 @@ static void ymodem_send_end_frame(YMODEM_HANDLE_Typedef_t *handle)
 static YMODEM_RUN_RESULT_Typedef_t ymodem_req_send_file_data(YMODEM_HANDLE_Typedef_t *handle)
 {
     ASSERT_PAR(handle->set_send_data_func, NULL, return YMODEM_ABORT_ERROR);
-    YMODEM_RUN_RESULT_Typedef_t ret = YMODEM_SUCCESSFUL;
+    YMODEM_RUN_RESULT_Typedef_t ret = YMODEM_IS_RUNNING;
     uint8_t buf[YMODEM_DATA_PACKAGE_SIZE_MIN] = {0};
     uint8_t packet_num = 0;
     uint32_t fill_size = handle->set_send_data_func(buf+3, YMODEM_DATA_FRAME_SIZE_MIN, &packet_num);
     if(fill_size == 0)
     {
-        return ret;
+        return YMODEM_SUCCESSFUL;
     }
     else if(fill_size < YMODEM_DATA_FRAME_SIZE_MIN && fill_size != 0)
     {
@@ -243,7 +245,7 @@ static YMODEM_RUN_RESULT_Typedef_t ymodem_req_send_file_data(YMODEM_HANDLE_Typed
     buf[1] = packet_num;
     buf[2] = ~buf[1];
     uint16_t crc = ymodem_crc16(YMODEM_CRC_DATA_OFFSET(buf), YMODEM_DATA_FRAME_SIZE_MIN);
-    buf[YMODEM_DATA_PACKAGE_SIZE_MIN-2] = (uint8_t)crc>>8;
+    buf[YMODEM_DATA_PACKAGE_SIZE_MIN-2] = (uint8_t)(crc>>8);
     buf[YMODEM_DATA_PACKAGE_SIZE_MIN-1] = (uint8_t)crc&0x00FF;
     ASSERT_PAR(handle->set_reply_data_func, NULL, return YMODEM_ABORT_ERROR);
     handle->set_reply_data_func(buf, YMODEM_DATA_PACKAGE_SIZE_MIN);
@@ -268,9 +270,10 @@ static void ymodem_send_start_frame(YMODEM_HANDLE_Typedef_t *handle)
     buf[0] = (uint8_t)YMODEM_SOH;
     buf[1] = 0;
     buf[2] = ~buf[1];
-    snprintf((char *)buf+3, YMODEM_DATA_FRAME_SIZE_MIN, "%s%u", handle->file_name, handle->file_size);
+    snprintf((char *)buf+3, YMODEM_DATA_FRAME_SIZE_MIN, "%s %u", handle->file_name, handle->file_size);
+    buf[3+strlen(handle->file_name)] = '\0';
     uint16_t crc = ymodem_crc16(YMODEM_CRC_DATA_OFFSET(buf), YMODEM_DATA_FRAME_SIZE_MIN);
-    buf[YMODEM_DATA_PACKAGE_SIZE_MIN-2] = (uint8_t)crc>>8;
+    buf[YMODEM_DATA_PACKAGE_SIZE_MIN-2] = (uint8_t)(crc>>8);
     buf[YMODEM_DATA_PACKAGE_SIZE_MIN-1] = (uint8_t)crc&0x00FF;
     ASSERT_PAR(handle->set_reply_data_func, NULL, return);
     handle->set_reply_data_func(buf, YMODEM_DATA_PACKAGE_SIZE_MIN);
@@ -322,7 +325,7 @@ static inline YMODEM_RUN_RESULT_Typedef_t ymodem_check_EOT(const uint8_t *data)
 {
     if(data[0] == (uint8_t)YMODEM_EOT)
     {
-        return YMODEM_SUCCESSFUL;
+        return YMODEM_IS_RUNNING;
     }
     return YMODEM_FRAME_NOT_MATCH;
 }
@@ -343,7 +346,7 @@ static YMODEM_RUN_RESULT_Typedef_t ymodem_get_data_frame(YMODEM_HANDLE_Typedef_t
 {
     if(len < YMODEM_DATA_PACKAGE_SIZE_MIN)
     {
-        return YMODEM_FRAME_NOT_MATCH;
+        return YMODEM_FRAME_NOT_FULL;
     }
     uint16_t size =  YMODEM_GET_FRAME_SIZE(data);
     uint16_t data_len = YMODEM_GET_FRAME_DATA_SIZE(data);
@@ -351,7 +354,7 @@ static YMODEM_RUN_RESULT_Typedef_t ymodem_get_data_frame(YMODEM_HANDLE_Typedef_t
     {
         if(len < size)
         {
-            return YMODEM_FRAME_NOT_MATCH;
+            return YMODEM_FRAME_NOT_FULL;
         }
         /*crc verify*/
         if(ymodem_crc_check(data, size) == true)
@@ -360,7 +363,7 @@ static YMODEM_RUN_RESULT_Typedef_t ymodem_get_data_frame(YMODEM_HANDLE_Typedef_t
             handle->set_rec_data_func(data+3, (uint32_t)data_len, data[1]);
             handle->file_size_cnt += data_len;
             ymodem_update_progress(handle);
-            return YMODEM_SUCCESSFUL;
+            return YMODEM_IS_RUNNING;
         }
     }
     return YMODEM_FRAME_NOT_MATCH;
@@ -416,7 +419,7 @@ static YMODEM_RUN_RESULT_Typedef_t ymodem_check_stop_SOH(YMODEM_HANDLE_Typedef_t
     UNUSED(handle);
     if(YMODEM_RECEIVER_MIN_DATA_SIZE_CHECK(len) == 0)
     {
-        return YMODEM_FRAME_NOT_MATCH;
+        return YMODEM_FRAME_NOT_FULL;
     }
     uint16_t size = YMODEM_GET_FRAME_SIZE(data);
     /*检测是否是ymodem帧数据*/
@@ -426,7 +429,7 @@ static YMODEM_RUN_RESULT_Typedef_t ymodem_check_stop_SOH(YMODEM_HANDLE_Typedef_t
         {
             return YMODEM_FRAME_NOT_MATCH;
         }
-        return YMODEM_SUCCESSFUL;
+        return YMODEM_IS_RUNNING;
     }
     return YMODEM_FRAME_NOT_MATCH;
 }
@@ -456,7 +459,7 @@ static YMODEM_RUN_RESULT_Typedef_t ymodem_check_start_SOH(YMODEM_HANDLE_Typedef_
     uint16_t size = len - index;
     if(YMODEM_RECEIVER_MIN_DATA_SIZE_CHECK(size) == 0)
     {
-        return YMODEM_FRAME_NOT_MATCH;
+        return YMODEM_FRAME_NOT_FULL;
     }
     /*检测是否是ymodem帧数据*/
     uint8_t *data_offset = data+index;
@@ -467,7 +470,7 @@ static YMODEM_RUN_RESULT_Typedef_t ymodem_check_start_SOH(YMODEM_HANDLE_Typedef_
             return YMODEM_FRAME_NOT_MATCH;
         }
         ymodem_get_file_name(handle, data_offset);
-        return YMODEM_SUCCESSFUL;
+        return YMODEM_IS_RUNNING;
     }
     return YMODEM_FRAME_NOT_MATCH;
 }
@@ -495,6 +498,34 @@ static void ymodem_send_flag_step(YMODEM_HANDLE_Typedef_t *handle, YMODEM_CHAR_F
 
 /**
   ******************************************************************
+  * @brief   ymodem 检测中止帧
+  * @param   [in]handle Ymodem句柄
+  * @param   [in]data 帧数据
+  * @param   [in]len 数据大小
+  * @return  false 不是中止帧.
+  * @author  aron566
+  * @version V1.0
+  * @date    2021-02-17
+  ******************************************************************
+  */
+static bool ymodem_is_abort_frame(YMODEM_HANDLE_Typedef_t *handle, uint8_t *data, uint32_t len)
+{
+  if(len < YMODEM_CAN_NUMBER)
+  {
+    return false;
+  }
+  for(uint16_t i = 0; i < YMODEM_CAN_NUMBER; i++)
+  {
+    if(data[i] != YMODEM_CAN)
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+  ******************************************************************
   * @brief   ymodem 接收数据任务
   * @param   [in]handle Ymodem句柄
   * @param   [in]data 数据
@@ -507,6 +538,12 @@ static void ymodem_send_flag_step(YMODEM_HANDLE_Typedef_t *handle, YMODEM_CHAR_F
   */
 static YMODEM_RUN_RESULT_Typedef_t ymodem_rec_task(YMODEM_HANDLE_Typedef_t *handle, uint8_t *data, uint32_t len)
 {
+    YMODEM_RUN_RESULT_Typedef_t ret = YMODEM_IS_RUNNING;
+    if(ymodem_is_abort_frame(handle, data, len) == true)
+    {
+      ymodem_update_run_step(handle, YMODEM_NO_RUNNING);
+      return YMODEM_ABORT_ERROR;
+    }
     switch(handle->run_step)
     {
         case YMODEM_NO_RUNNING:
@@ -517,7 +554,7 @@ static YMODEM_RUN_RESULT_Typedef_t ymodem_rec_task(YMODEM_HANDLE_Typedef_t *hand
         case YMODEM_WAIT_START_SOH:
             ASSERT_PAR(handle->set_reply_data_func, NULL, return YMODEM_ABORT_ERROR);
             ymodem_send_flag_step(handle, YMODEM_C, false);
-            if(ymodem_check_start_SOH(handle, data, len) == YMODEM_SUCCESSFUL)
+            if((ret = ymodem_check_start_SOH(handle, data, len)) == YMODEM_IS_RUNNING)
             {
                 ymodem_update_run_step(handle, YMODEM_REPLY_START_SOH_ACK);
                 handle->last_time = ymodem_current_time_sec;
@@ -535,13 +572,13 @@ static YMODEM_RUN_RESULT_Typedef_t ymodem_rec_task(YMODEM_HANDLE_Typedef_t *hand
         case YMODEM_REPLY_DATA_ACK:
         case YMODEM_WAIT_START_EOT_FLAG:
         case YMODEM_REPLY_START_EOT_NAK:
-            if(ymodem_check_EOT(data) == YMODEM_SUCCESSFUL)
+            if((ret = ymodem_check_EOT(data)) == YMODEM_IS_RUNNING)
             {
                 ymodem_send_flag_step(handle, YMODEM_NAK, true);
                 ymodem_update_run_step(handle, YMODEM_WAIT_END_EOT_FLAG);
                 handle->last_time = ymodem_current_time_sec;
             }
-            else if(ymodem_get_data_frame(handle, data, len) == YMODEM_SUCCESSFUL)
+            else if((ret = ymodem_get_data_frame(handle, data, len)) == YMODEM_IS_RUNNING)
             {
                 ymodem_send_flag_step(handle, YMODEM_ACK, true);
                 handle->last_time = ymodem_current_time_sec;
@@ -549,7 +586,7 @@ static YMODEM_RUN_RESULT_Typedef_t ymodem_rec_task(YMODEM_HANDLE_Typedef_t *hand
             break;
         case YMODEM_WAIT_END_EOT_FLAG:
         case YMODEM_REPLY_END_EOT_ACK:
-            if(ymodem_check_EOT(data) == YMODEM_SUCCESSFUL)
+            if((ret = ymodem_check_EOT(data)) == YMODEM_IS_RUNNING)
             {
                 ymodem_send_flag_step(handle, YMODEM_ACK, true);
                 ymodem_update_run_step(handle, YMODEM_SEND_ONE_C_END);
@@ -563,7 +600,7 @@ static YMODEM_RUN_RESULT_Typedef_t ymodem_rec_task(YMODEM_HANDLE_Typedef_t *hand
             break;
         case YMODEM_WAIT_END_SOH:
         case YMODEM_REPLY_END_SOH_ACK:
-            if(ymodem_check_stop_SOH(handle, data, len) == YMODEM_SUCCESSFUL)
+            if((ret = ymodem_check_stop_SOH(handle, data, len)) == YMODEM_IS_RUNNING)
             {
                 ymodem_update_run_step(handle, YMODEM_COMPLETE);
                 ymodem_send_flag_step(handle, YMODEM_ACK, true);
@@ -576,14 +613,16 @@ static YMODEM_RUN_RESULT_Typedef_t ymodem_rec_task(YMODEM_HANDLE_Typedef_t *hand
             break;
     }
     /*进度未变则检测超时*/
-    if(handle->current_progress <= handle->last_progress)
+    if(handle->run_step == handle->last_run_step)
     {
         if((ymodem_current_time_sec - handle->last_time) > handle->set_time_out)
         {
+            ymodem_update_run_step(handle, YMODEM_COMPLETE);
             return YMODEM_RUN_TIMEOUT;
         }
     }
-    return YMODEM_IS_RUNNING;
+    handle->last_run_step = handle->run_step;
+    return ret;
 }
 
 /**
@@ -692,13 +731,15 @@ static YMODEM_RUN_RESULT_Typedef_t ymodem_send_task(YMODEM_HANDLE_Typedef_t *han
             break;
     }
     /*进度未变则检测超时*/
-    if(handle->current_progress <= handle->last_progress)
+    if(handle->run_step == handle->last_run_step)
     {
         if((ymodem_current_time_sec - handle->last_time) > handle->set_time_out)
         {
+            ymodem_update_run_step(handle, YMODEM_COMPLETE);
             return YMODEM_RUN_TIMEOUT;
         }
     }
+    handle->last_run_step = handle->run_step;
     return YMODEM_IS_RUNNING;
 }
 
@@ -799,6 +840,7 @@ YMODEM_RUN_RESULT_Typedef_t ymodem_task_run(YMODEM_HANDLE_Typedef_t *handle, uin
 {
     YMODEM_RUN_RESULT_Typedef_t ret = YMODEM_SUCCESSFUL;
     ASSERT_PAR(handle, NULL, return YMODEM_UNKNOW_ERROR);
+
     /*判断运行模式*/
     switch(handle->set_mode)
     {
@@ -846,4 +888,3 @@ bool ymodem_init(YMODEM_HANDLE_Typedef_t *handle, YMODEM_MODE_Typedef_t mode, YM
 }                                                                               
 #endif                                                                          
 /******************************** End of file *********************************/
-                                                                                

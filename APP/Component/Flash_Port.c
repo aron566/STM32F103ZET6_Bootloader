@@ -5,7 +5,7 @@
  *
  *  @author aron566
  *
- *  @copyright 爱谛科技研究院.
+ *  @copyright None.
  *
  *  @brief FLASH操作接口
  *
@@ -49,6 +49,53 @@ extern "C" {
 *
 ********************************************************************************
 */
+
+/**
+  ******************************************************************
+  * @brief   写入指定分区数据
+  * @param   [in]name 分区名称
+  * @param   [in]data 存储区
+  * @param   [in]Offset 写入地址相对分区起始地址偏移
+  * @param   [in]Size 写入大小
+  * @return  -1失败，写入长度
+  * @author  aron566
+  * @version V1.0
+  * @date    2021-02-11
+  ******************************************************************
+  */
+int Flash_Port_Write_Partition_Data(const char *Partition_Name, const uint8_t *data, uint32_t Offset, uint32_t Size)
+{
+  const struct fal_partition *part = fal_partition_find(Partition_Name);
+  if(part == NULL)
+  {
+    return -1;
+  }
+  return fal_partition_write(part, Offset, data, Size);
+}
+
+/**
+  ******************************************************************
+  * @brief   读取指定分区数据
+  * @param   [in]name 分区名称
+  * @param   [in]Dest_Buf 存储区
+  * @param   [in]Offset 读取地址偏移
+  * @param   [in]Read_Size 读取大小
+  * @return  -1失败，读取长度
+  * @author  aron566
+  * @version V1.0
+  * @date    2021-02-11
+  ******************************************************************
+  */
+int Flash_Port_Read_Partition_Data(const char *Partition_Name, uint8_t *Dest_Buf, uint32_t Offset, uint32_t Read_Size)
+{
+  const struct fal_partition *part = fal_partition_find(Partition_Name);
+  if(part == NULL)
+  {
+    return -1;
+  }
+  return fal_partition_read(part, Offset, Dest_Buf, Read_Size);
+}
+
 /**
   ******************************************************************
   * @brief   擦除指定分区
@@ -78,6 +125,50 @@ bool Flash_Port_Erase_Partition(const char *Partition_Name)
 
 /**
   ******************************************************************
+  * @brief   获取指定分区地址
+  * @param   [in]name 分区名称
+  * @return  成功提供分区地址,否则提供bl地址
+  * @author  aron566
+  * @version V1.0
+  * @date    2021-02-08
+  ******************************************************************
+  */
+uint32_t Flash_Port_Get_Partition_Addr(const char *Partition_Name)
+{
+  uint32_t addr;
+  const struct fal_partition *part = fal_partition_find(Partition_Name);
+  if(part == NULL)
+  {
+    return 0x08000000;
+  }
+  addr = 0x08000000+(uint32_t)part->offset;
+  return addr;
+}
+
+/**
+  ******************************************************************
+  * @brief   获取指定分区大小
+  * @param   [in]name 分区名称
+  * @return  分区大小,0xFFFFFFFF未获取到
+  * @author  aron566
+  * @version V1.0
+  * @date    2021-02-08
+  ******************************************************************
+  */
+uint32_t Flash_Port_Get_Partition_Size(const char *Partition_Name)
+{
+  uint32_t size = 0xFFFFFFFF;
+  const struct fal_partition *part = fal_partition_find(Partition_Name);
+  if(part == NULL)
+  {
+    return size;
+  }
+  size = (uint32_t)part->len;
+  return size;
+}
+
+/**
+  ******************************************************************
   * @brief   Flash操作初始化
   * @param   [in]None
   * @return  None
@@ -91,7 +182,7 @@ void Flash_Port_Init(void)
   /*万能驱动初始化*/
   sfud_init();
   
-  /*flash分区初始化*/
+  /*fal分区初始化*/
   fal_init();
 }
 

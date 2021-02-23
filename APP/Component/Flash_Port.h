@@ -38,7 +38,15 @@ extern "C" {
 void Flash_Port_Init(void);
 /*Flash擦除指定分区*/
 bool Flash_Port_Erase_Partition(const char *Partition_Name);
-
+/*获取指定分区地址*/
+uint32_t Flash_Port_Get_Partition_Addr(const char *Partition_Name);
+/*获取指定分区大小*/
+uint32_t Flash_Port_Get_Partition_Size(const char *Partition_Name);
+/*读取指定分区数据*/
+int Flash_Port_Read_Partition_Data(const char *Partition_Name, uint8_t *Dest_Buf, uint32_t Offset, uint32_t Read_Size);
+/*写入指定分区数据*/
+int Flash_Port_Write_Partition_Data(const char *Partition_Name, const uint8_t *data, uint32_t Offset, uint32_t Size);
+  
 #ifdef __cplusplus ///<end extern c
 }
 #endif

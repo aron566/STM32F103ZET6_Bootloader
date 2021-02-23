@@ -304,7 +304,7 @@ void Uart_Port_Init(void)
                                                 &hdma_usart1_rx,
                                                 &hdma_usart1_tx,
                                                 NULL,/**< 备用自定义DMA缓冲区 防止Cache的影响*/
-                                                128, 
+                                                256, 
                                                 (uint32_t)CQ_BUF_256B, 0
 #if USE_FREERTOS
   , NULL

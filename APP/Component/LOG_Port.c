@@ -59,7 +59,7 @@ extern "C" {
 void EasyLog_Init(void)
 {
     /* close printf buffer */
-//    setbuf(stdout, NULL);
+    setbuf(stdout, NULL);
     
 	elog_init();
 

@@ -118,6 +118,13 @@ NULL：0
 ACK：0x06
 
 流程结束！
+
+发送者发送中止传输标识：
+      /-----------/
+    /    CAN    /
+  /-----------/
+CA：代表0x18
+
 */
 /** Private defines ----------------------------------------------------------*/
 #define FILE_NAME_LEN_MAX       64
@@ -182,6 +189,7 @@ typedef enum
   YMODEM_IS_RUNNING,          /**< 运行中*/
   YMODEM_ABORT_ERROR,         /**< 运行中止*/
   YMODEM_FRAME_NOT_MATCH,     /**< 帧不匹配*/
+  YMODEM_FRAME_NOT_FULL,      /**< 帧不全*/
   YMODEM_UNKNOW_ERROR,        /**< 未知错误*/
 }YMODEM_RUN_RESULT_Typedef_t;
 
@@ -224,7 +232,6 @@ typedef struct
   char file_name[FILE_NAME_LEN_MAX];              /**< 发送/接收文件名*/
   uint32_t file_size;                             /**< 发送/接收文件大小*/
   float current_progress;                         /**< 当前文件发送/接收进度*/
-  float last_progress;                            /**< 上次文件发送/接收进度*/
   uint32_t time_cnt;                              /**< 时间计时*/
   uint32_t set_time_out;                          /**< 任务超时*/
   uint32_t last_time;                             /**< 上次运行时间*/
@@ -234,6 +241,7 @@ typedef struct
   YMODEM_REPLY_DATA_CALLBACK set_reply_data_func; /**< 答复数据回调*/
   YMODEM_MODE_Typedef_t set_mode;                 /**< Ymodem模式状态*/
   YMODEM_TRANSFER_STEP_Typedef_t run_step;        /**< Ymodem运行状态*/
+  YMODEM_TRANSFER_STEP_Typedef_t last_run_step;   /**< Ymodem上次运行状态*/
 }YMODEM_HANDLE_Typedef_t;
 /** Exported constants -------------------------------------------------------*/
 
@@ -311,4 +319,3 @@ void ymodem_set_send_file_info(YMODEM_HANDLE_Typedef_t *handle, const char *file
 #endif                                                                          
 #endif                                                                          
 /******************************** End of file *********************************/
-                                                                                

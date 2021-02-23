@@ -1190,6 +1190,9 @@
         <group>
             <name>Component</name>
             <file>
+                <name>$PROJ_DIR$\..\APP\Component\Bootloader_Port.c</name>
+            </file>
+            <file>
                 <name>$PROJ_DIR$\..\APP\Component\Flash_Port.c</name>
             </file>
             <file>
@@ -1199,6 +1202,9 @@
                 <name>$PROJ_DIR$\..\APP\Component\LOG_Port.c</name>
             </file>
             <file>
+                <name>$PROJ_DIR$\..\APP\Component\Register_Port.c</name>
+            </file>
+            <file>
                 <name>$PROJ_DIR$\..\APP\Component\RTC_Port.c</name>
             </file>
             <file>
@@ -1206,6 +1212,9 @@
             </file>
             <file>
                 <name>$PROJ_DIR$\..\APP\Component\UART_Port.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\APP\Component\Ymodem_Port.c</name>
             </file>
         </group>
         <group>
@@ -1533,10 +1542,16 @@
     <group>
         <name>Utilities</name>
         <file>
+            <name>$PROJ_DIR$\..\Utilities\Bootloader.c</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\..\Utilities\CircularQueue.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\..\Utilities\utilities.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\Utilities\Utilities_AES.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\..\Utilities\utilities_crc.c</name>

@@ -15,13 +15,14 @@
 extern "C" {
 #endif
 /** Includes -----------------------------------------------------------------*/
-#include <stdint.h> /**< nedd definition of uint8_t */
+#include <stdint.h> /**< need definition of uint8_t */
 #include <stddef.h> /**< need definition of NULL    */
 #include <stdbool.h>/**< need definition of BOOL    */
 #include <stdio.h>  /**< if need printf             */
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h> /**< need variable max value    */
+#include <inttypes.h>
 /** Private includes ---------------------------------------------------------*/
 #include <time.h>
 /** Private defines ----------------------------------------------------------*/
@@ -51,7 +52,14 @@ typedef enum
     DOUBLE,
     STRING,
     VALUE_TYPE_MAX,
-}VALUE_Type_t; 
+}VALUE_Type_t;
+
+/*进度条样式*/
+typedef enum
+{
+  PROGRESS_PYTHON_STYLE = 0,/**< Python样式*/
+  SHARP_CHAR_STYLE,         /**< #样式*/
+}PROGRESS_STYLE_Typedef_t;
 /** Exported constants -------------------------------------------------------*/
 
 /** Exported macros-----------------------------------------------------------*/
@@ -61,7 +69,7 @@ typedef enum
  */ 
 //#define UNUSED(x) (void)(x)/**< 消除未使用参数警告*/
 #define OFFSETOF(struct_type, member)  ((size_t)(&(((struct_type*)0)->member)))/**< 求成员偏移字节*/
-#define GET_ARRAY_SIZE(array)   (sizeof(array)/array[0])/**< 求数组元素个数*/
+#define GET_ARRAY_SIZE(array)   (sizeof(array)/sizeof(array[0]))/**< 求数组元素个数*/
 #define BYTES_TO_U8ARRAY_INNDEX(at_bytes) (at_bytes-1)/**< 字节转为数组中的位置*/
 #define GET_U16_HI_BYTE(data)   ((uint8_t)((data>>8)&0x00FF))/**< 获得u16数据高字节*/
 #define GET_U16_LOW_BYTE(data)  ((uint8_t)(data&0x00FF))/**< 获得u16数据低字节*/
@@ -74,9 +82,15 @@ typedef enum
 /*调试打印*/
 void debug_print(uint8_t *msg, uint32_t msg_len);
 
+/*计算大小输出大小字符串*/
+char *calculateSize(uint64_t size);
+
 /*us级延时*/
 void delay_xus(uint32_t nTime);
 
+/*打印进度条*/
+void printf_progress_bar(size_t process, size_t total, PROGRESS_STYLE_Typedef_t style, bool reset_display_flag);
+  
 /*安全字符串拷贝*/
 char *strncopy(char *dest_str, const char *src_str, size_t size);
 

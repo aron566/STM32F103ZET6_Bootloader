@@ -128,93 +128,91 @@ static int read(long offset, uint8_t *buf, size_t size)
 
 static int write(long offset, const uint8_t *buf, size_t size)
 {
-    size_t i;
-    uint32_t read_data;
-    uint32_t addr = stm32f1_onchip_flash.addr + offset;
+  size_t i;
+  uint32_t read_data;
+  uint32_t addr = stm32f1_onchip_flash.addr + offset;
 
-    HAL_FLASH_Unlock();
-    __HAL_FLASH_GET_FLAG(
-            FLASH_FLAG_EOP | FLASH_FLAG_WRPERR | FLASH_FLAG_PGERR
-                    | FLASH_FLAG_OPTVERR);
-		uint16_t data = 0;
-    for (i = 0; i < size; i++)
-    {
-        /* write data */
-        log_i("write addr:0x%04X",addr);
-        data = *(buf+i);
-        if((i+1) < size)
-        {
-                i++;
-                data |= ((uint16_t)*(buf+i)<<8);
-        }
-        else
-        {
-                data &= 0x00FF;
-        }
-        HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD ,addr, data);
-        read_data = *(uint16_t *) addr;
-        addr += 2;
-        
-        /* check data */
-        if (read_data != data)
-        {
-            log_i("data unmatched read data:%d",read_data);
-            return -1;
-        }
-    }
-    HAL_FLASH_Lock();
+  HAL_FLASH_Unlock();
+  __HAL_FLASH_GET_FLAG(
+          FLASH_FLAG_EOP | FLASH_FLAG_WRPERR | FLASH_FLAG_PGERR
+                  | FLASH_FLAG_OPTVERR);
+  uint16_t data = 0;
+  for (i = 0; i < size; i++)
+  {
+      /* write data */
+      data = *(buf+i);
+      if((i+1) < size)
+      {
+        i++;
+        data |= ((uint16_t)*(buf+i)<<8);
+      }
+      else
+      {
+         data &= 0x00FF;
+      }
+      HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD ,addr, data);
+      read_data = *(uint16_t *) addr;
+      addr += 2;
+      
+      /* check data */
+      if (read_data != data)
+      {
+        return -1;
+      }
+  }
+  HAL_FLASH_Lock();
 
-    return size;
+  return size;
 }
 
 static int erase(long offset, size_t size)
 {
-    HAL_StatusTypeDef flash_status;
-    size_t erased_size = 0;
-    
-    uint32_t addr = stm32f1_onchip_flash.addr + offset;
-    FLASH_EraseInitTypeDef erase_config = {0};
-    uint32_t erasepages = 0;
-    uint32_t error;
-    /* start erase */
-    HAL_FLASH_Unlock();
-    __HAL_FLASH_GET_FLAG(
-    FLASH_FLAG_EOP | FLASH_FLAG_WRPERR | FLASH_FLAG_PGERR
-                    | FLASH_FLAG_OPTVERR);
-    /* it will stop when erased size is greater than setting size */
-		
-    /*擦除页地址*/
-    erase_config.PageAddress = stm32_get_sector(addr ,size ,&erasepages);
-    log_i("erase page addr:0x%08X,PAGES:%d",erase_config.PageAddress,erasepages);
-    
-    /*所属BANK*/
-    erase_config.Banks = FLASH_BANK_1;
-    /*按页擦除*/
-    erase_config.TypeErase = FLASH_TYPEERASE_PAGES;
-    /*擦除页数量*/
-    erase_config.NbPages = erasepages;
-    log_i("erase page number:%d",erasepages);
-    flash_status = HAL_FLASHEx_Erase(&erase_config, &error);
-    if (flash_status != HAL_OK)
-    {
-        log_i("erase error");
-        return -1;
-    }
-    erased_size += stm32_get_sector_size(erasepages);
-    log_i("erase size:%d",erased_size);
-		
-    HAL_FLASH_Lock();
+  HAL_StatusTypeDef flash_status;
+  size_t erased_size = 0;
+  
+  uint32_t addr = stm32f1_onchip_flash.addr + offset;
+  FLASH_EraseInitTypeDef erase_config = {0};
+  uint32_t erasepages = 0;
+  uint32_t error;
+  /* start erase */
+  HAL_FLASH_Unlock();
+  __HAL_FLASH_GET_FLAG(
+  FLASH_FLAG_EOP | FLASH_FLAG_WRPERR | FLASH_FLAG_PGERR
+                  | FLASH_FLAG_OPTVERR);
+  /* it will stop when erased size is greater than setting size */
+  
+  /*擦除页地址*/
+  erase_config.PageAddress = stm32_get_sector(addr ,size ,&erasepages);
+  log_i("erase page addr:0x%08X,PAGES:%d",erase_config.PageAddress,erasepages);
+  
+  /*所属BANK*/
+  erase_config.Banks = FLASH_BANK_1;
+  /*按页擦除*/
+  erase_config.TypeErase = FLASH_TYPEERASE_PAGES;
+  /*擦除页数量*/
+  erase_config.NbPages = erasepages;
+  log_i("erase page number:%d",erasepages);
+  flash_status = HAL_FLASHEx_Erase(&erase_config, &error);
+  if (flash_status != HAL_OK)
+  {
+      log_i("erase error");
+      return -1;
+  }
+  erased_size += stm32_get_sector_size(erasepages);
+  log_i("erase size:%d",erased_size);
+  
+  HAL_FLASH_Lock();
 
-    return size;
+  return size;
 }
 
 const struct fal_flash_dev stm32f1_onchip_flash =
 {
-    .name       = "stm32_onchip",
-    .addr       = FLASH_PAGE_0_ADDR,
-    .len        = 512*1024,
-    .blk_size   = FLASH_PAGE_SIZE,
-    .ops        = {init, read, write, erase},
-    .write_gran = 32
+  .name       = "stm32_onchip",
+  .addr       = FLASH_PAGE_0_ADDR,
+  .len        = 512*1024,
+  .blk_size   = FLASH_PAGE_SIZE,
+  .ops        = {init, read, write, erase},
+  .write_gran = 32
 };
 

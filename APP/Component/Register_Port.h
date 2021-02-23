@@ -1,16 +1,16 @@
 /**
- *  @file Update_Protocol.h
+ *  @file Register_Port.h
  *
- *  @date 2021/2/1
+ *  @date 2021/2/22
  *
  *  @author aron566
  *
- *  @brief ¹Ì¼þ¸üÐÂÐ­Òé
+ *  @brief è®¾å¤‡æ³¨å†Œæ£€æµ‹
  *  
  *  @version v1.0
  */
-#ifndef UPDATE_PROTOCOL_H
-#define UPDATE_PROTOCOL_H
+#ifndef REGISTER_H
+#define REGISTER_H
 #ifdef __cplusplus ///<use C compiler
 extern "C" {
 #endif
@@ -21,57 +21,22 @@ extern "C" {
 #include <stdio.h>  /**< if need printf*/
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h> /**< if need INT_MAX*/
+#include <limits.h>/**< if need INT_MAX*/
 /** Private includes ---------------------------------------------------------*/
 /** Private defines ----------------------------------------------------------*/
 
 /** Exported typedefines -----------------------------------------------------*/
-/*bootload ÔËÐÐ×´Ì¬*/
-typedef enum
-{
-  WAIT_SIGNAL_MODE = 0,       /**< µÈ´ýÉý¼¶ÖÐ*/
-  UPDATE_MODE,                /**< Éý¼¶ÖÐ*/
-  COMPLETE,                   /**< ÒÑÍê³É*/
-}BOOTLOAD_RUN_MODE_Typedef_t;
 
-/*bootload Êý¾Ý´«ÊäÐ­Òé*/
-typedef enum
-{
-  YMODEM_PROTOCOCL = 0,
-  CUSTOME_PROTOCOL
-}UPDATE_PROTOCOL_Typedef_t;
-
-/*bootload µ±Ç°¸üÐÂÉý¼¶ or ½µ¼¶*/
-typedef enum
-{
-  UPGRADE_FIREWARE = 0,
-  DEMOTION_FIREWARE
-}CURRENT_UPDATE_MODE_Typedef_t;
-
-/*bootload µ±Ç°Êý¾Ýcrc½á¹û*/
-typedef enum
-{ 
-  DATA_CRC_ERROR = 0,
-  DATA_CRC_OK,
-}DATA_CRC_RESULT_Typedef_t;
-
-typedef struct
-{
-  BOOTLOAD_RUN_MODE_Typedef_t run_state;
-  UPDATE_PROTOCOL_Typedef_t protocol;
-  CURRENT_UPDATE_MODE_Typedef_t current_update_mode;
-  
-}UPDATE_Handle_Typedef_t;
 /** Exported constants -------------------------------------------------------*/
 /** Exported macros-----------------------------------------------------------*/
 /** Exported variables -------------------------------------------------------*/
 /** Exported functions prototypes --------------------------------------------*/
 
-/*Ð­ÒéÕ»³õÊ¼»¯*/
-void Update_Protocol_Init(void);
-/*Ð­ÒéÕ»Æô¶¯*/
-void Update_Protocol_Start(void);
-  
+/*è®¾å¤‡æ³¨å†ŒæŽ¥å£åˆå§‹åŒ–*/
+void Register_Port_Init(void);
+/*è®¾å¤‡æ³¨å†ŒæŽ¥å£å¯åŠ¨*/
+bool Register_Port_Start(void);
+
 #ifdef __cplusplus ///<end extern c
 }
 #endif

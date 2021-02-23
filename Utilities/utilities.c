@@ -32,7 +32,13 @@ extern "C" {
 /** Private constants --------------------------------------------------------*/
 /** Public variables ---------------------------------------------------------*/
 /** Private variables --------------------------------------------------------*/
+/*进度条打印*/
+static char sharp_style_buf[302] = {'\0'};
+static char python_progress_style_buf[3*100+4] = {'\0'};
 
+/*计算大小*/
+static const char *sizes_str[] = { "EiB", "PiB", "TiB", "GiB", "MiB", "KiB", "B" };
+static const uint64_t exbibytes = 1024ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL;
 /** Private function prototypes ----------------------------------------------*/
 
 /** Private user code --------------------------------------------------------*/
@@ -66,6 +72,38 @@ void debug_print(uint8_t *msg, uint32_t msg_len)
 }
 
 /**
+ * @brief 计算大小输出大小字符串
+ * 
+ * @param size 
+ * @return char* 
+ */
+char *calculateSize(uint64_t size)
+{
+  static char result[20] = {0};
+  uint64_t  multiplier = exbibytes;
+  int i;
+  
+  for(i = 0; i < GET_ARRAY_SIZE(sizes_str); i++, multiplier /= 1024)
+  {
+    if (size < multiplier)
+    {
+      continue;
+    }
+    if (size % multiplier == 0)
+    {
+      sprintf(result, "%" PRIu64 " %s", size / multiplier, sizes_str[i]);
+    }
+    else
+    {
+      sprintf(result, "%.1f %s", (float) size / multiplier, sizes_str[i]);
+    }
+    return result;
+  }
+  strcpy(result, "0");
+  return result;
+}
+
+/**
  * @brief 安全字符串拷贝
  * 
  * @param dest_str 目标存储区
@@ -77,7 +115,7 @@ char *strncopy(char *dest_str, const char *src_str, size_t size)
 {
   if(size == 0 || dest_str == NULL || src_str == NULL)
   {
-      return dest_str;
+    return dest_str;
   }
   strncpy(dest_str, src_str, size);
   dest_str[size-1] = '\0';
@@ -96,36 +134,87 @@ char *strncopy(char *dest_str, const char *src_str, size_t size)
 	*/
 void delay_xus(uint32_t nTime)
 {
-    int old_val,new_val,val;
- 
-    if(nTime > 900)
+  int old_val,new_val,val;
+
+  if(nTime > 900)
+  {
+    for(old_val = 0; old_val < nTime/900; old_val++)
     {
-        for(old_val = 0; old_val < nTime/900; old_val++)
-        {
-            delay_xus(900);
-        }
-        nTime = nTime%900;
+      delay_xus(900);
     }
- 
-    old_val = SysTick->VAL;
-    new_val = old_val - CPU_FREQUENCY_MHZ*nTime;
-    if(new_val >= 0)
+    nTime = nTime%900;
+  }
+
+  old_val = SysTick->VAL;
+  new_val = old_val - CPU_FREQUENCY_MHZ*nTime;
+  if(new_val >= 0)
+  {
+    do
     {
-        do
-        {
-            val = SysTick->VAL;
-        }
-        while((val < old_val)&&(val >= new_val));
+      val = SysTick->VAL;
     }
-    else
+    while((val < old_val)&&(val >= new_val));
+  }
+  else
+  {
+    new_val += CPU_FREQUENCY_MHZ*1000;
+    do
     {
-        new_val += CPU_FREQUENCY_MHZ*1000;
-        do
-        {
-            val = SysTick->VAL;
-        }
-        while((val <= old_val)||(val > new_val));
+      val = SysTick->VAL;
     }
+    while((val <= old_val)||(val > new_val));
+  }
+}
+
+/**
+	******************************************************************
+	* @brief   打印进度条
+	* @param   [in]process 进度
+	* @param   [in]total 总进度
+  * @param   [in]style 显示样式
+  * @param   [in]reset_display_flag 重置显示
+	* @retval  None
+	* @author  aron566
+	* @version V1.0
+	* @date    2021-2-12
+	******************************************************************
+	*/
+void printf_progress_bar(size_t process, size_t total, PROGRESS_STYLE_Typedef_t style, bool reset_display_flag)
+{
+  static int last_count = -1;
+  const char* stat = {"-\\|/"};
+  int current_count = (process * 100) / total;
+  if(current_count < 0)
+  {
+    return;
+  }
+  if(reset_display_flag == true)
+  {
+    memset(python_progress_style_buf, 0, 3*100+4);
+    memset(sharp_style_buf, 0, 302);
+    return;
+  }
+  /*进度不同则刷新输出*/
+  if(last_count != current_count)
+  {
+    last_count = current_count;
+    if(style == PROGRESS_PYTHON_STYLE)
+    {
+      /*类python进度条，每打印一个字符补偿2个字符否则无法左对齐103等宽*/
+//      strcat(python_progress_style_buf, "█");
+//      printf("[%-*s][%%%d]%c\r" ,current_count*2+103 ,python_progress_style_buf ,current_count ,stat[current_count%4]);
+    }
+    
+    if(style == SHARP_CHAR_STYLE)
+    {
+      /*普通进度条，固定左对齐101等宽*/
+      sharp_style_buf[current_count] = '#';/*替换█--Alt+9609~9600*/
+      printf("[%-101s][%%%d]%c\r" ,sharp_style_buf ,current_count ,stat[current_count%4]);
+    }
+  }
+#if !defined (__CC_ARM)
+    fflush(stdout);
+#endif
 }
 
 /**

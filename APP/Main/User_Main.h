@@ -22,14 +22,19 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>/**< if need INT_MAX*/
-/** Private includes ---------------------------------------------------------*/
+/** Private includes ---------------------------------------------------------*/ 
+#include "Register_Port.h"
 #include "Flash_Port.h"
 #include "LED_Port.h"
 #include "Timer_Port.h"
 #include "UART_Port.h"
+#include "Ymodem_Port.h"
+#include "Bootloader_Port.h"
+
 #include "CircularQueue.h"
 #include "utilities.h"
 #include "utilities_crc.h"
+#include "YModem.h"
 #include "Shell_Port.h"
 #include "LOG_Port.h"
 /** Private defines ----------------------------------------------------------*/

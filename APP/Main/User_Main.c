@@ -34,15 +34,6 @@ extern "C" {
 *
 ********************************************************************************
 */
-int func(int argc, char *argv[])
-{
-    printf("%dparameter(s)\r\n", argc);
-    for (char i = 1; i < argc; i++)
-    {
-        printf("%s\r\n", argv[i]);
-    }
-    return 0;
-}
 
 /** Public application code --------------------------------------------------*/
 /*******************************************************************************
@@ -63,8 +54,8 @@ int func(int argc, char *argv[])
   */
 void User_Main_Task_Start(void)
 {
-  /*启动shell*/
-  Shell_Port_Start();
+  /*bl接口启动*/
+  Bootloader_Port_Start();
 }
 
 /**
@@ -85,14 +76,10 @@ void User_Main_Init(void)
   /*Flash操作初始化*/
   Flash_Port_Init();
   
-  /*Easylogger初始化*/
-  EasyLog_Init();
-  Test_LOG_Func();
-  
-  /*Shell初始化*/
-  Shell_Port_Init();
+  /*定时器初始化*/
+  Timer_Port_Init();
 }
-SHELL_EXPORT_CMD(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN), func, func, test);
+
 #ifdef __cplusplus ///<end extern c
 }
 #endif

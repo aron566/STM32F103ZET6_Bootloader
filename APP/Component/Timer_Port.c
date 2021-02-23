@@ -5,7 +5,7 @@
  *
  *  @author aron566
  *
- *  @copyright 爱谛科技研究院.
+ *  @copyright None.
  *
  *  @brief 定时器接口
  *
@@ -119,12 +119,12 @@ const char *__getzone(void)
 void Timer_Port_Set_Time(int year, int month, int day, int hour, int min, int sec)
 {
   struct tm set_time;
-  set_time.tm_sec = 10;
-  set_time.tm_min = 0;
-  set_time.tm_hour = 8;
-  set_time.tm_mday = 13;
-  set_time.tm_mon = 10-1;
-  set_time.tm_year = 2017-1900;
+  set_time.tm_sec = sec;
+  set_time.tm_min = min;
+  set_time.tm_hour = hour;
+  set_time.tm_mday = day;
+  set_time.tm_mon = month-1;
+  set_time.tm_year = year-1900;
   //set_time.tm_wday = 1;
   //set_time.tm_yday = 2;
   set_time.tm_isdst = -1;
@@ -149,6 +149,7 @@ void Timer_Port_IRQHandler(void)
     Timer_Port_TimeMS = 0;
     Timer_Port_TimeSec++;
   }
+  ymodem_update_time_ms_Port();
 }
 
 /**
@@ -178,7 +179,6 @@ void Timer_Port_Init(void)
   */
 uint32_t Timer_Port_Get_Current_Time(TIMER_TIME_UNIT_Typedef_t time_unit)
 {
-  
   return (time_unit == TIMER_MS)?Timer_Port_TimeMS:Timer_Port_TimeSec;
 }
 
