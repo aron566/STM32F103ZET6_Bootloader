@@ -5,7 +5,7 @@
  *
  *  @author aron566
  *
- *  @copyright None.
+ *  @copyright Copyright (c) 2021 aron566 <aron566@163.com>.
  *
  *  @brief 引导程序.
  *
@@ -183,7 +183,10 @@ static void Update_Check_Friware_Info(void)
   {
     case UPDATE_SUCESSFUL:
       /*TODO*/
-      Bl_Handle->pJump_func(Get_App_Partition_Address());
+      Bl_Handle->pJump_func(Get_App_Partition_Address(), APP_STACK_BASE_ADDR);
+      /*restore*/
+      App_Frimware_Restore();
+      Update_Check_Friware_Info();
       break;
     case UPDATE_WAITTING:   ///<! 写入APP分区成功，一直为标识可能程序有问题
       /*Wait cnt acc, if cnt more than songthing number recover factory frimware*/
@@ -197,7 +200,7 @@ static void Update_Check_Friware_Info(void)
       }
       Write_Frimware_Info(&Bl_Handle->Frimware_Info);
       /*Try Jump To Application*/
-      Bl_Handle->pJump_func(Get_App_Partition_Address());
+      Bl_Handle->pJump_func(Get_App_Partition_Address(), APP_STACK_BASE_ADDR);
       break;
     case DOWNLOAD_COMPLETE:///<! 下载成功，固件迁移
       App_Friware_Move(&Bl_Handle->Frimware_Info);
@@ -205,7 +208,10 @@ static void Update_Check_Friware_Info(void)
       break;
     default:
       /*Invaild Frimware*/
-      Bl_Handle->pJump_func(Get_Bl_Partition_Address());
+      /*First Try Jump To Application*/
+      Bl_Handle->pJump_func(Get_App_Partition_Address(), APP_STACK_BASE_ADDR);
+      printf("BLaddr:%08X.\r\n", Get_Bl_Partition_Address());
+      Bl_Handle->pJump_func(Get_Bl_Partition_Address(), BL_STACK_BASE_ADDR);
       break;
   }
 }

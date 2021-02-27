@@ -34,7 +34,10 @@ extern "C" {
 #define DOUNT_DOWN_DELAY_TIME               (COUNT_DONW_TIME_SEC*10)
 #define RETRY_UPDATE_NUM_MAX                3U        /**< 更新重试次数*/
 #define FRIMWARE_NAME_LEN_MAX               64U       /**< 固件名称长度*/
-#define REGISTER_CODE_LEN_MAX               (4*8U)    /**< 注册码长度Byte*/
+#define REGISTER_CODE_LEN_MAX               (4*4U)    /**< 注册码长度Byte*/
+#define STACK_TOP_ADDR_MASK                 0x2FF00000U/**< 0消除允许的位*/
+#define BL_STACK_BASE_ADDR                  0x20000000U/**< Bl栈底地址*/
+#define APP_STACK_BASE_ADDR                 0x20000000U/**< App栈底地址*/
 /** Exported typedefines -----------------------------------------------------*/
 
 /*bootload 当前数据crc结果*/
@@ -72,7 +75,7 @@ typedef struct
 }FRIMWARE_INFO_Typedef_t;
 
 /*Bootloader 任务句柄*/
-typedef void (*JUMP_TO_ADDR_CALLBACK)(uint32_t App_Addr);
+typedef void (*JUMP_TO_ADDR_CALLBACK)(uint32_t App_Addr, uint32_t Stack_Base_Addr);
 typedef uint32_t (*GET_PARTITION_ADDR_CALLBACK)(const char *Partition_Name);
 typedef void (*ERASE_PARTITION_CALLBACK)(const char *Partition_Name);
 typedef int (*WRITE_PARTITION_DATA_CALLBACK)(const char *Partition_Name, const uint8_t *data, uint32_t Offset, uint32_t Size);

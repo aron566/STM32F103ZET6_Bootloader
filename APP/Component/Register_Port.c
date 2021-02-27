@@ -5,7 +5,7 @@
  *
  *  @author aron566
  *
- *  @copyright None.
+ *  @copyright Copyright (c) 2021 aron566 <aron566@163.com>.
  *
  *  @brief --
  *
@@ -13,7 +13,7 @@
  *
  *  @version v1.0
  */
-#ifdef __cplusplus ///<use C compiler
+#ifdef __cplusplus ///< use C compiler
 extern "C" {
 #endif
 /** Includes -----------------------------------------------------------------*/
@@ -26,25 +26,29 @@ extern "C" {
 /*AES运行模式*/
 typedef enum
 {
-  ENCRYPT_MODE = 0,         /**< 加密模式*/
-  DECRYPT_MODE,             /**< 解密模式*/
-}AES_RUN_MODE_Typedef_t;
-
-/*AES运行结果*/
-typedef struct
-{
-  uint32_t data_len;        /**< AES加解密数据长度*/
-  uint8_t result_Data[0];   /**< AES加解密数据指针*/
+  ENCRYPT_MODE = 0,                  /**< 加密模式*/
+  DECRYPT_MODE,                      /**< 解密模式*/
+}AES_RUN_MODE_Typedef_t;         
+         
+/*AES运行结果*/        
+typedef struct         
+{        
+  uint32_t data_len;                 /**< AES加解密数据长度*/
+  uint8_t result_Data[0];            /**< AES加解密数据指针*/
 }AES_RUN_RESULT_Typedef_t;
 
 /** Private macros -----------------------------------------------------------*/
 #define ENABLE_TEST_AES_ENCRYPT     1/**< 测试UID加密调试打印*/
 #define ENABLE_REGISTER_DEBUG       0/**< 开启注册码写入调试打印*/
+#define REGISTER_CODE_LEN           (REGISTER_CODE_LEN_MAX)/**< 注册码长度*/  
+#define COMPARE_CODE_LEN            12/**< 匹配字段长度*/
 #define AES_KEY_SIZE                256
 #define FLAG_PARTITION_NAME         FRIMWARE_FLAG_PARTITION_NAME/**< 注册码存放分区*/
 
+#define READ_REGISTER_STATE         "READ REGISTER STATUS"
 #define READ_DEVICE_UID_CMD         "READ UID"
 #define WRITE_REGISTER_CODE_CMD     "WRITE REGISTER CODE"
+#define REGISTER_FRAME_LEN_MIN      (strlen(READ_DEVICE_UID_CMD))
 /** Private constants --------------------------------------------------------*/
 /** Public variables ---------------------------------------------------------*/
 /** Private variables --------------------------------------------------------*/
@@ -57,7 +61,7 @@ static unsigned char AES_KEY[32] = { 'a', 'i', 'd', 'i', 's', 'c', 'i', 't',
     '2', '2', '2', '@', '@', '=', '?', '@',
     '2', '0', '3', '5', '8', '0', '0', '8' };
 /*Device_ID*/
-static uint32_t Device_UID[4] = {0};
+static uint32_t Device_UID[REGISTER_CODE_LEN/4] = {0};
 /*串口句柄*/
 static Uart_Dev_Handle_t *Uart_Dev_Handle = NULL;
 static FRIMWARE_INFO_Typedef_t Register_Code;
@@ -188,10 +192,10 @@ static const uint32_t *Get_DeviceUID(void)
 #if ENABLE_TEST_AES_ENCRYPT  
   /*原始数据*/
   printf("origin data:");
-  debug_print((uint8_t *)Device_UID, 4*sizeof(uint32_t));
+  debug_print((uint8_t *)Device_UID, REGISTER_CODE_LEN);
   
   /*加密*/
-  AES_RUN_RESULT_Typedef_t *p_ENResult = Encrypt_Decrypt_Data(ENCRYPT_MODE, (uint8_t *)Device_UID, 4*sizeof(uint32_t));
+  AES_RUN_RESULT_Typedef_t *p_ENResult = Encrypt_Decrypt_Data(ENCRYPT_MODE, (uint8_t *)Device_UID, REGISTER_CODE_LEN);
   if(p_ENResult == NULL)
   {
     printf("run aes encrypt faild.\r\n");
@@ -235,7 +239,7 @@ static int Register_Code_Write(uint8_t *code)
     printf("Read Register Code Faild.\r\n");
     return ret;
   }
-  memmove(&Register_Code.Register_Code, code, 4*sizeof(uint32_t));
+  memmove(&Register_Code.Register_Code, code, REGISTER_CODE_LEN);
   
   /*erase partition*/
   Flash_Port_Erase_Partition(FLAG_PARTITION_NAME);
@@ -269,6 +273,16 @@ static bool Check_Data(const uint8_t *Target_Data, const uint8_t *Read_Data, siz
   }
 }
 
+/**
+  ******************************************************************
+  * @brief   启动注册任务
+  * @param   [in]None.
+  * @return  true 注册成功.
+  * @author  aron566
+  * @version v1.0
+  * @date    2021/2/22
+  ******************************************************************
+  */
 static bool Register_Task_Start(void)
 {
   if(Uart_Dev_Handle == NULL)
@@ -278,7 +292,7 @@ static bool Register_Task_Start(void)
   uint32_t len = CQ_getLength(Uart_Dev_Handle->cb);
   
   /*检查缓冲区数据长度*/
-  if(len < strlen(READ_DEVICE_UID_CMD))
+  if(len < REGISTER_FRAME_LEN_MIN)
   {
     return false;
   }
@@ -287,64 +301,71 @@ static bool Register_Task_Start(void)
   CQ_ManualGetData(Uart_Dev_Handle->cb, temp_buf, len);
   
   /*读取UID*/
-  if(strncmp((const char *)temp_buf, READ_DEVICE_UID_CMD, strlen(READ_DEVICE_UID_CMD)) == 0)
+  if(strncmp((const char *)temp_buf, READ_DEVICE_UID_CMD, REGISTER_FRAME_LEN_MIN) == 0)
   {
     /*发送UID*/
-    Uart_Port_Transmit_Data(Uart_Dev_Handle, (uint8_t *)Device_UID, 4*sizeof(uint32_t));
+    Uart_Port_Transmit_Data(Uart_Dev_Handle, (uint8_t *)Device_UID, REGISTER_CODE_LEN);
     CQ_ManualOffsetInc(Uart_Dev_Handle->cb, len);
+    return false;
   }
-  else
+  /*读取注册状态*/
+  else if(strncmp((const char *)temp_buf, READ_REGISTER_STATE, REGISTER_FRAME_LEN_MIN) == 0)
+  {
+    if(len < strlen(READ_REGISTER_STATE))
+    {
+      return false;
+    }
+    /*发送注册码*/
+    Uart_Port_Transmit_Data(Uart_Dev_Handle, (uint8_t *)Register_Code.Register_Code, REGISTER_CODE_LEN);
+    CQ_ManualOffsetInc(Uart_Dev_Handle->cb, len);
+    return false;
+  }
+  /*写入REGISTER CODE*/
+  else if(strncmp((const char *)temp_buf, WRITE_REGISTER_CODE_CMD, REGISTER_FRAME_LEN_MIN) == 0)
   {
     if(len < strlen(WRITE_REGISTER_CODE_CMD))
     {
       return false;
     }
-    /*写入REGISTER CODE*/
-    if(strncmp((const char *)temp_buf, WRITE_REGISTER_CODE_CMD, strlen(WRITE_REGISTER_CODE_CMD)) == 0)
+    char str[REGISTER_CODE_LEN*2+REGISTER_CODE_LEN] = {0};
+    int ret = sscanf((const char *)temp_buf, WRITE_REGISTER_CODE_CMD
+                     " %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s"
+                     , str, str+3, str+6, str+9, str+12, str+15, str+18
+                     , str+21, str+24, str+27, str+30, str+33, str+36, str+39
+                     , str+42, str+45);
+    if(ret == REGISTER_CODE_LEN)
     {
-      char str[32*2+32] = {0};
-      int ret = sscanf((const char *)temp_buf, WRITE_REGISTER_CODE_CMD
-                       " %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s"
-                       " %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s"
-                       , str, str+3, str+6, str+9, str+12, str+15, str+18
-                       , str+21, str+24, str+27, str+30, str+33, str+36, str+39
-                       , str+42, str+45, str+48, str+51, str+54, str+57, str+60
-                       , str+63, str+66, str+69, str+72, str+75, str+78, str+81
-                       , str+84, str+87, str+90, str+93);
-      if(ret == 32)
+      int index = 0, i = 0;
+      for(; index < REGISTER_CODE_LEN*3; index += 3)
       {
-        int index = 0, i = 0;
-        for(; index < 32*3; index += 3)
-        {
-          temp_buf[i++] = hextoi(str+index);
-        }
-        /*注册*/
-        int ret = Register_Code_Write(temp_buf);
-        if(ret < 0)
-        {
-          printf("Write Code Faild.\r\n");
-          CQ_ManualOffsetInc(Uart_Dev_Handle->cb, len);
-          return false;
-        }
-#if ENABLE_REGISTER_DEBUG       
-        printf("\r\nGet Registe HEX Code:");
-        debug_print(temp_buf, 32);
-        for(index = 2; index < 32*3-3; index += 3)
-        {
-          str[index] = str[index] == '\0'?' ':str[index];
-        }
-        printf("Register Code:%s", str);
-#endif
-        CQ_ManualOffsetInc(Uart_Dev_Handle->cb, len);
-        return true;
+        temp_buf[i++] = hextoi(str+index);
       }
-      return false;
-    }
-    else
-    {
+      /*注册*/
+      int ret = Register_Code_Write(temp_buf);
+      if(ret < 0)
+      {
+        printf("Write Code Faild.\r\n");
+        CQ_ManualOffsetInc(Uart_Dev_Handle->cb, len);
+        return false;
+      }
+#if ENABLE_REGISTER_DEBUG       
+      printf("\r\nGet Registe HEX Code:");
+      debug_print(temp_buf, REGISTER_CODE_LEN);
+      for(index = 2; index < REGISTER_CODE_LEN*3-3; index += 3)
+      {
+        str[index] = str[index] == '\0'?' ':str[index];
+      }
+      printf("Register Code:%s", str);
+#endif
       CQ_ManualOffsetInc(Uart_Dev_Handle->cb, len);
-      return false;
+      return true;
     }
+    CQ_ManualOffsetInc(Uart_Dev_Handle->cb, 1);
+    return false;
+  }
+  else
+  {
+    CQ_ManualOffsetInc(Uart_Dev_Handle->cb, 1);
   }
   return false;
 }
@@ -372,20 +393,20 @@ bool Register_Port_Start(void)
   
   /*解码成UID*/
   /*解密*/
-  AES_RUN_RESULT_Typedef_t *p_DEResult = Encrypt_Decrypt_Data(DECRYPT_MODE, (uint8_t *)&Register_Code.Register_Code, 32);
+  AES_RUN_RESULT_Typedef_t *p_DEResult = Encrypt_Decrypt_Data(DECRYPT_MODE, (uint8_t *)&Register_Code.Register_Code, REGISTER_CODE_LEN);
   if(p_DEResult == NULL)
   {
     printf("run aes decrypt faild.\r\n");
     return NULL;
   }
-#if ENABLE_REGISTER_DEBUG 
-  printf("\r\ndecrypt data:");
+#if ENABLE_REGISTER_DEBUG
+  printf("\r\nCheck decrypt data:");
   debug_print(p_DEResult->result_Data, p_DEResult->data_len-1);
 #endif 
   /*不匹配则等待注册*/
-  if(false == Check_Data((const uint8_t *)Device_UID, (const uint8_t *)p_DEResult->result_Data, 12))
+  if(false == Check_Data((const uint8_t *)Device_UID, (const uint8_t *)p_DEResult->result_Data, COMPARE_CODE_LEN))
   {
-    printf("\r\nPlease Write Command: the \"READ UID\" first and write the \"WRITE REGISTER CODE\" at after.\r\n");
+    printf("\r\nPlease Write Command: the \"READ UID\" or \"READ REGISTER STATUS\"first and write the \"WRITE REGISTER CODE\" at after.\r\n");
     while(1)
     {
       if(Register_Task_Start() == true)
@@ -397,7 +418,7 @@ bool Register_Port_Start(void)
     AES_Run_Result_Free(p_DEResult);
     return false;
   }
-  printf("\r\nCongratulation Check Register Code PASS!\r\n");
+  printf("\r\nCongratulations Verification PASS!\r\n");
   AES_Run_Result_Free(p_DEResult);
   return true;
 }

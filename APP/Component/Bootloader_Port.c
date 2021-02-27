@@ -17,7 +17,8 @@
 extern "C" {
 #endif
 /** Includes -----------------------------------------------------------------*/
-
+#include "rtc.h"
+#include "spi.h"
 /* Private includes ----------------------------------------------------------*/
 #include "Bootloader_Port.h"
 #include "Bootloader.h"
@@ -30,9 +31,8 @@ extern "C" {
 typedef void (*pJumpFunction)(void);                                                                          
 
 /** Private macros -----------------------------------------------------------*/
-#define STACK_TOP_ADDR_MASK 0x2FF00000U/**< 0消除允许的位*/
-#define STACK_BASE_ADDR     0x20000000U
-#define USE_RTOS_BOOTLOADER 1          /**< bl是否使用操作系统*/
+#define STACK_ADDR_MASK     STACK_TOP_ADDR_MASK /**< 0消除允许的位*/
+#define USE_RTOS_BOOTLOADER 1                   /**< bl是否使用操作系统*/
 /** Private constants --------------------------------------------------------*/
 
 /** Public variables ---------------------------------------------------------*/
@@ -185,20 +185,21 @@ static uint32_t Get_Partition_Size(const char *Partition_Name)
   ******************************************************************
   * @brief   跳转至应用程序分区
   * @param   [in]App_Addr app程序起始地址
+  * @param   [in]Stack_Base_Addr 栈底地址
   * @return  None.
   * @author  aron566
   * @version v1.0
   * @date    2021/2/13
   ******************************************************************
   */
-static void Jump_To_Application(uint32_t App_Addr)
+static void Jump_To_Application(uint32_t App_Addr, uint32_t Stack_Base_Addr)
 {
   uint32_t JumpAddress = 0;
   printf("read top address of stack : %08X\r\n", (*(__IO uint32_t*)App_Addr));
-  printf("check stack in:%08X\r\n\n", ((*(__IO uint32_t*)App_Addr) & STACK_TOP_ADDR_MASK ));
+  printf("check stack in:%08X\r\n\n", ((*(__IO uint32_t*)App_Addr) & STACK_ADDR_MASK ));
   
   /* Test if user code is programmed starting from address "APPLICATION_ADDRESS" */
-  if(((*(__IO uint32_t*)App_Addr) & STACK_TOP_ADDR_MASK ) == STACK_BASE_ADDR)
+  if(((*(__IO uint32_t*)App_Addr) & STACK_ADDR_MASK ) == Stack_Base_Addr)
   {
     /* Jump to user application */
     JumpAddress = *(__IO uint32_t*)(App_Addr + 4);
@@ -213,14 +214,21 @@ static void Jump_To_Application(uint32_t App_Addr)
 
     /* 设置所有时钟到默认状态，使用HSI时钟 */
     HAL_RCC_DeInit();
-
+    
+    HAL_DeInit();
+    HAL_RTC_MspDeInit(&hrtc);
+    HAL_SPI_MspDeInit(&hspi2);
+    HAL_SuspendTick();
+    HAL_UART_MspDeInit(&huart1);
+    HAL_UART_MspDeInit(&huart2);
+    
     /* 关闭所有中断，清除所有中断挂起标志 */
     for(int i = 0; i < 8; i++)
     {
       NVIC->ICER[i] = 0xFFFFFFFF;
       NVIC->ICPR[i] = 0xFFFFFFFF;
     }	
-
+    
     /*使能全局中断 */
     __enable_irq();
 
@@ -235,7 +243,7 @@ static void Jump_To_Application(uint32_t App_Addr)
 #endif
     JumpToApplication();
   }
-  printf("Jump Faild.\r\n");
+  printf("Try Jump Faild.\r\n");
 }                                                                      
 
 /**

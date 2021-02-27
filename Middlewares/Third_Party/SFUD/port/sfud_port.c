@@ -184,9 +184,12 @@ static void SPI_unlock(const struct __sfud_spi *spi)
 
 static void SPI_Delay(void)
 {
-//    uint32_t delay = 200;
-//    while(delay--);
-    osDelay(10);
+#if USE_FREERTOS_SYSTEM
+   osDelay(10);
+#else
+   uint32_t delay = 200;
+   while(delay--);
+#endif
 }
 /********************** END 外部接口 ******************************/
 
