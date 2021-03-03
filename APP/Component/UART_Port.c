@@ -220,10 +220,10 @@ bool Uart_Port_Transmit_Data(Uart_Dev_Handle_t *uart_opt_handle, uint8_t *data, 
   /*如用等待DMA 空闲*/
   while(HAL_DMA_GetState(uart_opt_handle->phdma_tx) == HAL_DMA_STATE_BUSY);
   
-  if(huart1.gState != HAL_UART_STATE_READY)	
+  if(uart_opt_handle->phuart.gState != HAL_UART_STATE_READY)	
   {
     HAL_UART_AbortTransmit(uart_opt_handle->phuart);
-	}
+  }
   
   /* 关闭DMA */
   __HAL_DMA_DISABLE(uart_opt_handle->phdma_tx);
