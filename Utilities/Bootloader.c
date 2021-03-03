@@ -210,7 +210,6 @@ static void Update_Check_Friware_Info(void)
       /*Invaild Frimware*/
       /*First Try Jump To Application*/
       Bl_Handle->pJump_func(Get_App_Partition_Address(), APP_STACK_BASE_ADDR);
-      printf("BLaddr:%08X.\r\n", Get_Bl_Partition_Address());
       Bl_Handle->pJump_func(Get_Bl_Partition_Address(), BL_STACK_BASE_ADDR);
       break;
   }
@@ -308,7 +307,7 @@ static void App_Frimware_Restore(void)
   Bl_Handle->Frimware_Info.Flag = UPDATE_WAITTING;
   Bl_Handle->Frimware_Info.Retry_Cnt = 0;
   Bl_Handle->Frimware_Info.FrimwareSize = Partition_Size;
-  strcpy(Bl_Handle->Frimware_Info.FrimwareName, Bl_Handle->Frimware_Info.BackFrimwareName);
+  strncopy(Bl_Handle->Frimware_Info.FrimwareName, Bl_Handle->Frimware_Info.BackFrimwareName, FRIMWARE_NAME_LEN_MAX);
   Write_Frimware_Info(&Bl_Handle->Frimware_Info);
 }
 
