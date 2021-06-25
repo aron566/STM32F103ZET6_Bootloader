@@ -51,14 +51,14 @@ typedef StaticTask_t osStaticThreadDef_t;
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
-uint32_t defaultTaskBuffer[ 3328 ];
+uint32_t defaultTaskBuffer[ 3072 ];
 osStaticThreadDef_t defaultTaskControlBlock;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .stack_mem = &defaultTaskBuffer[0],
-  .stack_size = sizeof(defaultTaskBuffer),
   .cb_mem = &defaultTaskControlBlock,
   .cb_size = sizeof(defaultTaskControlBlock),
+  .stack_mem = &defaultTaskBuffer[0],
+  .stack_size = sizeof(defaultTaskBuffer),
   .priority = (osPriority_t) osPriorityNormal,
 };
 
@@ -125,18 +125,18 @@ void StartDefaultTask(void *argument)
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN StartDefaultTask */
     /*start this must be first.*/
-  /*注册接口初始化*/
+  /*注册接口初始�?*/
   Register_Port_Init();
   while(Register_Port_Start() == false);
   
-  /*bl接口初始化*/
+  /*bl接口初始�?*/
   Bootloader_Port_Init();
   
-  /*Easylogger初始化*/
+  /*Easylogger初始�?*/
   EasyLog_Init();
   Test_LOG_Func();
   
-  /*Shell初始化*/
+  /*Shell初始�?*/
   Shell_Port_Init();
   /* Infinite loop */
   for(;;)
