@@ -5,7 +5,7 @@
  *
  *  @author aron566
  *
- *  @copyright None
+ *  @copyright Copyright (c) 2021 aron566 <aron566@163.com>.
  *
  *  @brief Easylogger操作
  *

@@ -5,7 +5,7 @@
  *
  *  @author aron566
  *
- *  @copyright 爱谛科技研究院.
+ *  @copyright Copyright (c) 2021 aron566 <aron566@163.com>.
  *
  *  @brief YMODEM协议接口
  *
