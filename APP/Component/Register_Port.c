@@ -59,7 +59,7 @@ static unsigned char AES_IV[16] = { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
 static unsigned char AES_KEY[32] = { 'a', 'i', 'd', 'i', 's', 'c', 'i', 't',
     'e', 'c', 'h', '2', '0', '2', '1', '0',
     '2', '2', '2', '@', '@', '=', '?', '@',
-    '2', '0', '3', '5', '8', '0', '0', '8' };
+    '0', '0', '0', '0', '0', '0', '0', '0' };
 /*Device_ID*/
 static uint32_t Device_UID[REGISTER_CODE_LEN/4] = {0};
 /*串口句柄*/

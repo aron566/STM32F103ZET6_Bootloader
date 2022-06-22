@@ -444,7 +444,7 @@ BL使用**AES256 CBC方式加密**
 
 IV:ABCDEFGHIJK01234
 
-KEY:aidiscitech20210222@@=?@20358008
+KEY:aidiscitech20210222@@=?@00000000
 
 网络在线工具：http://tool.chacuo.net/cryptaes/
 
